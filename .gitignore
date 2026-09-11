@@ -1,0 +1,28 @@
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Accidental venv dirs from a mangled paste
+\#/
+or/
+python3.13/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Scratch work
+scratch_work/*
+
+# Papers
+papers/
+
+# macOS
+.DS_Store
+
+# Claude
+CLAUDE.md
+
+# Large files
+models/baseline/baseline_predictions.h5ad
