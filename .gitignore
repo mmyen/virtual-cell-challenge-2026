@@ -26,3 +26,7 @@ CLAUDE.md
 
 # Large files
 models/baseline/baseline_predictions.h5ad
+models/pc_linreg/pc_linreg.h5ad
+
+# Downloadable data
+data/
