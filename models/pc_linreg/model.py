@@ -411,28 +411,53 @@ class Model:
         return ad.AnnData(X=X, obs=obs, var=control_adata.var.copy())
 
     def _predicted_cells(self, control_adata, p_sym, cells_per_pert, rng,
-                         knockdown_fraction, alpha):
+                         knockdown_fraction, alpha, gain=1.0, rounding="nearest"):
         """
         One perturbation's predicted cells: cells_per_pert real control cells
         (sampled without replacement), each gene scaled by the predicted
         effect and rounded to counts. Returns a (cells_per_pert, N_genes)
         float32 CSR block. Shared by predict() and write_submission() so the
         in-memory and streamed outputs are generated identically.
+
+        gain: multiplies every non-target gene's predicted effect before it
+              is applied to cells (the target keeps its forced knockdown).
+              Only affects the per-cell output, not predict_effects(): the
+              DE metrics (FID/JAC/REACH) need effects large enough for a
+              Wilcoxon test to detect, and the fitted effects are shrunken
+              (ridge + averaging over screens). See test_fid_fix.ipynb.
+        rounding: "nearest" -- np.round; deterministic, so any multiplier in
+              (0.5, 1.5) leaves a count of 1 unchanged, which erases most
+              predicted effects on low-count genes. "stochastic" -- round
+              up with probability equal to the fractional part, so every
+              gene's expected count is cells * multiplier exactly.
         """
         effect = self.predict_effects([p_sym], knockdown_fraction, alpha=alpha)[:, 0]  # (N_genes,)
+        if gain != 1.0:
+            p_gi = self.gene_index[p_sym]
+            target_effect = effect[p_gi]
+            effect = effect * gain
+            effect[p_gi] = target_effect
 
         idx = rng.choice(control_adata.n_obs, size=cells_per_pert, replace=False)
         cells = control_adata.X[idx]
         cells = cells.toarray() if sp.issparse(cells) else np.asarray(cells)
 
-        multiplier = 2.0 ** effect if self.effect_space == "log2" else 1.0 + effect
+        multiplier = 2.0 ** effect if self.effect_space == "log2" else np.clip(1.0 + effect, 0, None)
 
-        predicted = np.clip(np.round(cells * multiplier), 0, None).astype(np.float32)
+        scaled = cells * multiplier
+        if rounding == "nearest":
+            predicted = np.round(scaled)
+        elif rounding == "stochastic":
+            predicted = np.floor(scaled)
+            predicted += rng.random(scaled.shape) < (scaled - predicted)
+        else:
+            raise ValueError(f"rounding must be 'nearest' or 'stochastic', got {rounding!r}")
+        predicted = np.clip(predicted, 0, None).astype(np.float32)
         return sp.csr_matrix(predicted)  # sparsify per-block, not at the end
 
     def write_submission(self, path, context_controls, target_genes_by_context,
                          knockdown_fraction=0.9, alpha=1.0, cells_per_pert=400,
-                         rng=None, compression="gzip"):
+                         rng=None, compression="gzip", gain=1.0, rounding="nearest"):
         """
         Same output as predict_submission(...).write_h5ad(path), but streamed
         to disk one perturbation at a time instead of built in memory.
@@ -449,7 +474,8 @@ class Model:
         layout anndata reads back as a csr_matrix.
 
         Arguments as in predict_submission(); rng is shared across contexts
-        (None = fresh, unseeded, like predict()).
+        (None = fresh, unseeded, like predict()). gain and rounding: see
+        _predicted_cells (defaults reproduce the earlier submissions).
         """
         import h5py
 
@@ -493,7 +519,8 @@ class Model:
             for ctx in contexts:
                 for p_sym in target_genes_by_context[ctx]:
                     block = self._predicted_cells(context_controls[ctx], p_sym, cells_per_pert,
-                                                  rng, knockdown_fraction, alpha)
+                                                  rng, knockdown_fraction, alpha,
+                                                  gain=gain, rounding=rounding)
                     block.sort_indices()
                     n = block.nnz
                     data.resize((nnz + n,))
