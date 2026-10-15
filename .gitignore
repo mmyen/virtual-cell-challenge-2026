@@ -14,6 +14,7 @@ __pycache__/
 
 # Scratch work
 scratch_work/*
+models/slim/temp.ipynb
 
 # Papers
 papers/
