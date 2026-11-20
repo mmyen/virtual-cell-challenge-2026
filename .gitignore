@@ -28,6 +28,10 @@ CLAUDE.md
 # Large files
 models/baseline/baseline_predictions.h5ad
 models/pc_linreg/pc_linreg.h5ad
+models/slim/FINAL_TRANSFER_slim_K20_lam100_a2_gain2.5.h5ad
 
 # Downloadable data
 data/
+
+# A claude code output I needed to take the time to parse
+2026-10-24-113744-local-command-caveatthe-command-below-was-run-d.txt
