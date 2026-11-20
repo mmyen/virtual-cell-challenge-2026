@@ -25,4 +25,4 @@ After the validation phase ended, datasets (5) and (6) were used to create a pro
 The VCC validation and test data can be found in the submission portal.
 Certain files (datasets, .vcc files for submission) have been omitted due to large file size.
 
-The SLIM model with direct transfer scored ~40th percentile on the validation and final leaderboards (validation = 0.0265, final = 0.0654).
+The SLIM model with direct transfer scored ~40th percentile (0.0265) on the validation, while my final model with the smaller shrinkage term exhibited similar performance on the final leaderboard (0.0654).
