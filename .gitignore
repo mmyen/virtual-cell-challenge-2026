@@ -29,6 +29,7 @@ CLAUDE.md
 models/baseline/baseline_predictions.h5ad
 models/pc_linreg/pc_linreg.h5ad
 models/slim/FINAL_TRANSFER_slim_K20_lam100_a2_gain2.5.h5ad
+models/final_model/FINAL_MODEL_slim_transfer_with_shrinkage.h5ad
 
 # Downloadable data
 data/
